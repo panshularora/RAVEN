@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAVEN · INC-1042 isolation cell</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./studio.css" />
+</head>
+<body>
+  <div id="briefing" class="sheet" hidden>
+    <article class="ticket" aria-labelledby="ticket-title">
+      <p class="ticket-kicker">Plant 8 × 6 m · Bay 3 · cell locked</p>
+      <h1 id="ticket-title">INC-1042</h1>
+      <p id="ticket-when" class="ticket-when"></p>
+      <dl class="ticket-meta">
+        <div><dt>Site</dt><dd id="ticket-site"></dd></div>
+        <div><dt>Solving</dt><dd id="ticket-solving"></dd></div>
+      </dl>
+      <p id="ticket-problem" class="ticket-problem"></p>
+      <h2>Known map</h2>
+      <p class="ticket-note">RAVEN already has occupancy, home (1, 1), and the alarm pose at V-17. Humans stay outside.</p>
+      <ol id="ticket-methods" class="methods"></ol>
+      <button id="deploy" type="button">Deploy RAVEN</button>
+    </article>
+  </div>
+
+  <header>
+    <div class="brand">
+      <span class="mark">RAVEN</span>
+      <span class="sub" id="inc-sub">leak isolation · plant 8×6 m</span>
+    </div>
+    <p id="story">Loading the plant…</p>
+    <div class="status">
+      <div id="alarm" class="led alarm" role="status">LEAK</div>
+      <div id="clock" class="clock">T+00:00.0</div>
+    </div>
+  </header>
+
+  <aside id="log-col">
+    <h2>Plant map</h2>
+    <canvas id="minimap" width="280" height="210" aria-label="Occupancy map of Bay 3"></canvas>
+    <p id="map-caption">A* on a 0.10 m grid. Dark = occupied. Amber = planned path.</p>
+    <h2>Sensors live</h2>
+    <div id="sonar-panel" aria-label="five forward sonars">
+      <span class="panel-kicker">SONAR · ±40° · 2 m</span>
+      <div id="sonar-bars"></div>
+      <p id="sonar-vals" class="mono"></p>
+    </div>
+    <dl id="sensor-out">
+      <div><dt>ODOM</dt><dd id="pos">1.00, 1.00</dd></div>
+      <div><dt>YAW</dt><dd id="yaw">0°</dd></div>
+      <div><dt>WHEELS</dt><dd id="wheels">L 0  R 0</dd></div>
+      <div><dt>HSV</dt><dd id="hsv">—</dd></div>
+      <div><dt>IK res</dt><dd id="ik">—</dd></div>
+      <div><dt>GRIP</dt><dd id="grip">OPEN</dd></div>
+    </dl>
+    <h2>Event log</h2>
+    <p id="blurb"></p>
+    <ol id="log"></ol>
+  </aside>
+
+  <main id="stage">
+    <canvas id="view" aria-label="3D plant. Orange robot, blue tank, green valve."></canvas>
+    <ul id="legend">
+      <li><i class="swatch robot"></i>robot</li>
+      <li><i class="swatch tank"></i>tank T-04</li>
+      <li><i class="swatch valve"></i>valve V-17</li>
+      <li><i class="swatch aisle"></i>aisle obstacle</li>
+      <li><i class="swatch sonar"></i>sonar fan</li>
+    </ul>
+    <div id="hud-chip"><span id="hud-phase">IDLE</span><span id="hud-order">awaiting deploy</span></div>
+  </main>
+
+  <aside id="side">
+    <h2>Mission FSM</h2>
+    <ol id="phases">
+      <li data-phase="NAVIGATE">NAVIGATE</li>
+      <li data-phase="INSPECT">INSPECT</li>
+      <li data-phase="APPROACH">APPROACH</li>
+      <li data-phase="PLAN">PLAN</li>
+      <li data-phase="INTERVENE">INTERVENE</li>
+      <li data-phase="VERIFY">VERIFY</li>
+      <li data-phase="DONE">DONE</li>
+      <li data-phase="HUMAN_ASSIST">HUMAN</li>
+    </ol>
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 120 96" id="gauge" aria-label="valve angle">
+        <path d="M16 84 A 44 44 0 0 1 104 84" fill="none" stroke="#3a433c" stroke-width="8" />
+        <line id="needle" x1="60" y1="84" x2="60" y2="36" />
+        <circle cx="60" cy="84" r="4" fill="#e0a21a" />
+        <text x="60" y="18" text-anchor="middle">VALVE</text>
+        <text id="valve-num" x="60" y="94" text-anchor="middle">0°</text>
+      </svg>
+    </div>
+    <div class="cam-wrap">
+      <span>WRIST CAM · HSV</span>
+      <canvas id="cam" width="64" height="64" aria-label="wrist camera"></canvas>
+    </div>
+    <h2>How it solves</h2>
+    <ul id="how" class="how"></ul>
+  </aside>
+
+  <footer>
+    <button id="play" type="button">Pause</button>
+    <button id="restart" type="button">Restart</button>
+    <button id="follow" type="button" aria-pressed="true">Follow</button>
+    <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="mission time" />
+    <div id="speeds" role="group" aria-label="playback speed">
+      <button type="button" data-speed="0.5">0.5×</button>
+      <button type="button" data-speed="1" class="on">1×</button>
+      <button type="button" data-speed="2">2×</button>
+    </div>
+    <p class="hint">Space pause · R restart · F follow · drag orbit</p>
+  </footer>
+
+  <div id="orders" class="sheet" hidden>
+    <div class="orders-card" role="dialog" aria-labelledby="orders-title">
+      <p class="orders-kicker">On scene · leak confirmed</p>
+      <h2 id="orders-title">Order for V-17</h2>
+      <p id="orders-copy">Wrist camera saw red spray and a green handle. Pick the intervention. The robot stays put until you choose.</p>
+      <div id="order-list"></div>
+    </div>
+  </div>
+
+  <div id="debrief" class="sheet" hidden>
+    <div class="debrief-card">
+      <p class="orders-kicker" id="debrief-kicker">Mission closed</p>
+      <h2 id="debrief-title">SEALED</h2>
+      <p id="debrief-body"></p>
+      <dl id="debrief-stats"></dl>
+      <button id="debrief-again" type="button">Run another order</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="./studio.js"></script>
+</body>
+</html>
