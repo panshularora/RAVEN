@@ -29,6 +29,8 @@ python -m raven --no-view
 
 The Python client builds the plant and robot if `/RAVEN` is missing, then runs the same mission FSM.
 
+If CoppeliaSim is open but the command still prints the start hint, close any first-run or license window, then start **Add-ons → ZMQ remote API server** (port 23000).
+
 ## Tests
 
 ```
