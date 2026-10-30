@@ -29,6 +29,8 @@ DH = [
 ]
 GRIPPER_Z = 0.06
 HOME_Q = np.array([0.0, -0.4, 0.8, 0.0, 0.0], dtype=np.float64)
+INSPECT_Q = np.array([0.0, -0.4, 0.8, 0.0, 0.0], dtype=np.float64)
+WORKSPACE_STANDOFF = 0.42
 
 VALVE_CLOSED = (80.0, 100.0)
 NAV_POS_TOL = 0.12
