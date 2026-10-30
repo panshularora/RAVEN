@@ -5,7 +5,7 @@ import math
 import numpy as np
 
 from raven import config
-from raven.arm.dh import fk
+from raven.arm.dh import fk_prefix, gripper_fk
 from raven.sim.mock_world import MockWorld
 from raven.sim.scene_builder import ensure_scene
 from raven.types import Pose2D
@@ -76,7 +76,7 @@ class CoppeliaBackend:
         self.h_leak = sim.getObject("/Plant/leak")
 
     @classmethod
-    def connect(cls) -> CoppeliaBackend:
+    def connect(cls, fail_valve: bool = False) -> CoppeliaBackend:
         try:
             import zmq
             from coppeliasim_zmqremoteapi_client import RemoteAPIClient
@@ -87,31 +87,32 @@ class CoppeliaBackend:
             client.socket.setsockopt(zmq.LINGER, 0)
             sim = client.require("sim")
             sim.getSimulationTime()
-        except Exception as exc:
-            raise CoppeliaUnavailable(str(exc)) from exc
-        ensure_scene(sim)
-        try:
+            ensure_scene(sim)
             if sim.getSimulationState() == sim.simulation_stopped:
                 sim.setStepping(True)
                 sim.startSimulation()
-        except Exception:
-            pass
-        return cls(sim, client, MockWorld(fail_valve=False))
+            return cls(sim, client, MockWorld(fail_valve=fail_valve))
+        except CoppeliaUnavailable:
+            raise
+        except Exception as exc:
+            raise CoppeliaUnavailable(str(exc)) from exc
 
     def _push(self) -> None:
         sim = self.sim
         pose = self.world.pose
         Tb = _base_T(pose)
         sim.setObjectPose(self.h_base, _pose7(Tb))
-        T_arm = fk(self.world.joints)
+        T_grip = gripper_fk(self.world.joints)
         Tg = np.eye(4)
-        Tg[:3, :3] = Tb[:3, :3] @ T_arm[:3, :3]
-        Tg[:3, 3] = Tb[:3, 3] + Tb[:3, :3] @ T_arm[:3, 3]
+        Tg[:3, :3] = Tb[:3, :3] @ T_grip[:3, :3]
+        Tg[:3, 3] = Tb[:3, 3] + Tb[:3, :3] @ T_grip[:3, 3]
         sim.setObjectPose(self.h_grip, _pose7(Tg))
+        try:
+            sim.setObjectPose(self.h_cam, _pose7(Tg))
+        except Exception:
+            pass
         for i, h in enumerate(self.h_links):
-            q_partial = np.zeros(5, dtype=np.float64)
-            q_partial[: i + 1] = self.world.joints[: i + 1]
-            Ti = fk(q_partial)
+            Ti = fk_prefix(self.world.joints, i + 1)
             Tw = np.eye(4)
             Tw[:3, :3] = Tb[:3, :3] @ Ti[:3, :3]
             Tw[:3, 3] = Tb[:3, 3] + Tb[:3, :3] @ Ti[:3, 3]
@@ -120,7 +121,7 @@ class CoppeliaBackend:
             sim.setJointPosition(self.h_valve, math.radians(self.world.valve_angle))
         except Exception:
             pass
-        leak_z = 0.25 if self.world.leak else -1.0
+        leak_z = config.VALVE_Z if self.world.leak else -1.0
         tx, ty = config.TANK_XY
         sim.setObjectPose(self.h_leak, [tx, ty - 0.28, leak_z, 0, 0, 0, 1])
         try:
@@ -148,15 +149,7 @@ class CoppeliaBackend:
         self.world.set_gripper(closed)
 
     def get_camera_rgb(self) -> np.ndarray:
-        try:
-            self.sim.handleVisionSensor(self.h_cam)
-            img, res = self.sim.getVisionSensorImg(self.h_cam)
-            arr = np.frombuffer(bytes(img), dtype=np.uint8)
-            w, h = int(res[0]), int(res[1])
-            arr = arr.reshape((h, w, 3))
-            return np.flipud(arr).copy()
-        except Exception:
-            return self.world.camera_rgb()
+        return self.world.camera_rgb()
 
     def get_leak(self) -> bool:
         return self.world.leak

@@ -19,11 +19,15 @@ def _dh(theta: float, d: float, a: float, alpha: float) -> np.ndarray:
     )
 
 
-def fk(q: np.ndarray) -> np.ndarray:
+def fk_prefix(q: np.ndarray, n: int) -> np.ndarray:
     T = np.eye(4, dtype=np.float64)
-    for qi, (d, a, alpha) in zip(q, config.DH, strict=True):
+    for qi, (d, a, alpha) in zip(q[:n], config.DH[:n], strict=True):
         T = T @ _dh(float(qi), d, a, alpha)
     return T
+
+
+def fk(q: np.ndarray) -> np.ndarray:
+    return fk_prefix(q, len(config.DH))
 
 
 def gripper_fk(q: np.ndarray) -> np.ndarray:

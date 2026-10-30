@@ -16,4 +16,22 @@ def test_connect_failure_prints_hint(monkeypatch, capsys):
     with pytest.raises(SystemExit) as e:
         main()
     assert e.value.code == 1
-    assert "Start CoppeliaSim Edu, then retry --backend coppelia" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Start CoppeliaSim Edu, then retry --backend coppelia" in out
+    assert "down" in out
+    assert "ZMQ remote API" in out
+
+
+def test_make_backend_passes_fail_valve(monkeypatch):
+    seen: dict = {}
+
+    def fake_connect(*, fail_valve=False):
+        seen["fail_valve"] = fail_valve
+        raise CoppeliaUnavailable("skip")
+
+    monkeypatch.setattr("raven.backends.coppelia.CoppeliaBackend.connect", fake_connect)
+    from raven.__main__ import make_backend
+
+    with pytest.raises(CoppeliaUnavailable):
+        make_backend("coppelia", True)
+    assert seen.get("fail_valve") is True

@@ -15,7 +15,7 @@ def make_backend(name: str, fail_valve: bool):
     if name == "coppelia":
         from raven.backends.coppelia import CoppeliaBackend
 
-        return CoppeliaBackend.connect()
+        return CoppeliaBackend.connect(fail_valve=fail_valve)
     raise ValueError(f"unknown backend {name}")
 
 
@@ -27,8 +27,11 @@ def main() -> MissionResult:
     args = parser.parse_args()
     try:
         backend = make_backend(args.backend, args.fail_valve)
-    except CoppeliaUnavailable:
+    except CoppeliaUnavailable as exc:
         print("Start CoppeliaSim Edu, then retry --backend coppelia")
+        if str(exc):
+            print(str(exc))
+        print("If CoppeliaSim is already open: dismiss first-run windows, then Add-ons → ZMQ remote API server (port 23000).")
         raise SystemExit(1) from None
     if not args.no_view:
         from raven.sim.view import LiveView
