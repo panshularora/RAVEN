@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from raven.backends.coppelia import CoppeliaUnavailable
 from raven.backends.mock import MockBackend
 from raven.mission import run_mission
 from raven.types import MissionResult
@@ -24,7 +25,11 @@ def main() -> MissionResult:
     parser.add_argument("--fail-valve", action="store_true")
     parser.add_argument("--no-view", action="store_true")
     args = parser.parse_args()
-    backend = make_backend(args.backend, args.fail_valve)
+    try:
+        backend = make_backend(args.backend, args.fail_valve)
+    except CoppeliaUnavailable:
+        print("Start CoppeliaSim Edu, then retry --backend coppelia")
+        raise SystemExit(1) from None
     if not args.no_view:
         from raven.sim.view import LiveView
 
