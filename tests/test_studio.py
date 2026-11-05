@@ -93,3 +93,16 @@ def test_web_root_has_the_control_room():
     assert (root / "index.html").is_file()
     assert (root / "studio.js").is_file()
     assert (root / "studio.css").is_file()
+    sensors = (root / "sensors.html").read_text(encoding="utf-8")
+    analytics = (root / "analytics.html").read_text(encoding="utf-8")
+    assert "Sensor lab" in sensors
+    assert "IR thermopile" in sensors
+    assert "Graph-based sensor fusion" in analytics
+    assert "located = IR-TPA" in analytics
+    html = (root / "index.html").read_text(encoding="utf-8")
+    assert "sensors.html" in html
+    assert "analytics.html" in html
+    assert "cam-bar" in html
+    js = (root / "studio.js").read_text(encoding="utf-8")
+    assert "minDistance = 1.05" in js
+    assert "KeyW" in js

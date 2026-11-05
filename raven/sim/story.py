@@ -3,6 +3,7 @@ from __future__ import annotations
 from raven import config
 from raven.backends.mock import MockBackend
 from raven.mission import run_mission
+from raven.sim.fire import pack_fire
 from raven.sim.recorder import MissionRecorder, compact_grid, gate_time, pack_mission
 
 ACTIONS = [
@@ -130,4 +131,5 @@ def pack_story() -> dict:
         "inspect": close["inspect"],
         "frames": close["frames"],
         "branches": branches,
+        "fire": pack_fire(),
     }

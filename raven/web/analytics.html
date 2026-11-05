@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAVEN · Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./studio.css" />
+</head>
+<body class="page-doc">
+  <header>
+    <div class="brand">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="mark">RAVEN</span>
+      <span class="sub">analytics · fusion log</span>
+    </div>
+    <nav class="site-nav" aria-label="console">
+      <a href="./index.html">Plant</a>
+      <a href="./sensors.html">Sensors</a>
+      <a href="./analytics.html" class="on" aria-current="page">Analytics</a>
+    </nav>
+    <div class="status">
+      <div id="alarm" class="led">CELL</div>
+      <div id="clock" class="clock">T+00:00.0</div>
+    </div>
+  </header>
+
+  <main class="doc">
+    <p id="live-note" class="live-note">Open the Plant tab and run a hunt. Traces stream here over the same bus.</p>
+    <h1>Graph-based sensor fusion</h1>
+    <p class="lede">
+      Four traces vs mission time. Orange is IR temperature, cyan is VOC ppm, grey is smoke
+      optical density, red is heat flux. Locate is the moment IR, UV and vapour (or RGB) are
+      all true. Mitigation is the falling edge.
+    </p>
+
+    <canvas id="graph" width="1100" height="320" aria-label="sensor time series"></canvas>
+    <ul class="legend-row">
+      <li><i class="swatch robot"></i>IR °C / 400</li>
+      <li><i class="swatch sonar"></i>VOC ppm / 800</li>
+      <li><i class="swatch aisle"></i>smoke OD</li>
+      <li><i class="swatch fire"></i>heat flux / 40 kW·m⁻²</li>
+    </ul>
+
+    <section class="split">
+      <div>
+        <h2>Why a trip is a trip</h2>
+        <table class="grid-table">
+          <thead>
+            <tr><th>Sensor</th><th>Now</th><th>Trip</th><th>State</th></tr>
+          </thead>
+          <tbody id="fusion-body"></tbody>
+        </table>
+        <p class="explain">
+          Fusion rule: <code>located = IR-TPA ∧ UV-FLAME ∧ (VOC ∨ RGB)</code>.
+          Smoke and heat flux arm the operator; they are not required for the seat lock.
+          Line-of-sight through the aisle cuboid drops IR to 12% so the robot has to drive around,
+          same occupancy the A* uses.
+        </p>
+      </div>
+      <div>
+        <h2>Event log</h2>
+        <ol id="log" class="doc-log"></ol>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./analytics.js"></script>
+</body>
+</html>

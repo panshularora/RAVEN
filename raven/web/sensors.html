@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAVEN · Sensor lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./studio.css" />
+</head>
+<body class="page-doc">
+  <header>
+    <div class="brand">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="mark">RAVEN</span>
+      <span class="sub">sensor lab · close-up</span>
+    </div>
+    <nav class="site-nav" aria-label="console">
+      <a href="./index.html">Plant</a>
+      <a href="./sensors.html" class="on" aria-current="page">Sensors</a>
+      <a href="./analytics.html">Analytics</a>
+    </nav>
+    <div class="status">
+      <div id="alarm" class="led">CELL</div>
+      <div id="clock" class="clock">T+00:00.0</div>
+    </div>
+  </header>
+
+  <main class="doc">
+    <p id="live-note" class="live-note">Open the Plant tab and ignite. This page reads the live bus.</p>
+    <h1>What the robot actually sees</h1>
+    <p class="lede">
+      RAVEN does not get the fire coordinates. Six instruments vote. A sensor trips when its
+      reading crosses a threshold. Locate needs IR + UV and (VOC or wrist RGB) to agree.
+    </p>
+
+    <section class="looks">
+      <figure>
+        <canvas id="ir" width="192" height="192" aria-label="infrared close-up"></canvas>
+        <figcaption>IR thermopile · false colour · 8-pixel array painted as a 64×64 field</figcaption>
+      </figure>
+      <figure>
+        <canvas id="cam" width="192" height="192" aria-label="wrist RGB"></canvas>
+        <figcaption>Wrist RGB · HSV flame blob. Only lights when the camera faces the seat inside 1.55 m</figcaption>
+      </figure>
+      <div>
+        <p class="lab-label">8-pixel IR array ±40°</p>
+        <div id="pile" class="pile tall" aria-label="thermopile"></div>
+        <dl id="now" class="now">
+          <div><dt>range to seat</dt><dd id="fire-d">—</dd></div>
+          <div><dt>line of sight</dt><dd id="los">—</dd></div>
+          <div><dt>facing cosine</dt><dd id="facing">—</dd></div>
+          <div><dt>phase</dt><dd id="phase">IDLE</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section id="cards" class="cards"></section>
+  </main>
+  <script type="module" src="./sensors.js"></script>
+</body>
+</html>

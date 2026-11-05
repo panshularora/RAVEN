@@ -2,9 +2,9 @@
 
 **Robotic Autonomous Verification & Emergency Navigation**
 
-Simulation-only industrial leak isolation for **SRM 21MEO106T Introduction to Robotics**. Python 3.13. No hardware. A tank in Bay 3 is spraying. Humans are locked out. RAVEN already has the plant map and the alarm pose. It drives there, confirms the leak with its own camera, then you choose the intervention.
+Simulation-only industrial incident robot for **SRM 21MEO106T Introduction to Robotics**. Python 3.13. No hardware. You ignite a fire in Bay 3. RAVEN does not get the seat. It hunts with IR, smoke, VOC, UV, heat flux and wrist RGB, then you choose how to put it out. The original leak-isolation mission (V-17 close) is still in the brain and tests.
 
-![Incident ticket INC-1042](docs/superpowers/proof/01-briefing.png)
+![Incident ticket INC-1042](docs/superpowers/proof/fire-briefing.png)
 
 ## What this repo is
 
@@ -26,23 +26,27 @@ pip install -r requirements.txt
 python -m raven
 ```
 
-Leave the terminal open. Browser: **http://127.0.0.1:8765/**
+Leave the terminal open. Three pages, same live bus:
 
-1. Read ticket **INC-1042** (14:22 IST, Bay 3, Tank T-04, valve V-17). Click **Deploy RAVEN**.
-2. Robot A*s around the aisle. Watch the occupancy map, five sonar rays, odometry, wheel speeds.
-3. Wrist camera HSV-confirms red spray and the green handle. Playback **stops**.
-4. Pick an on-scene order:
-   - **Close isolation valve V-17** — IK, grasp, wrist +90°, verify leak clear
-   - **Confirm leak and hold** — evidence only, valve left open
-   - **Request human entry** — `HUMAN_ASSIST`, cell stays locked
-   - **Force a seized-valve recovery** — two failed closes, then human
-5. Debrief prints status, reason, attempts, valve angle.
+| Page | URL |
+|---|---|
+| Plant | http://127.0.0.1:8765/ |
+| Sensors | http://127.0.0.1:8765/sensors.html |
+| Analytics | http://127.0.0.1:8765/analytics.html |
 
-![Live plant: map, sonars, robot en route](docs/superpowers/proof/02-enroute.png)
+1. Read ticket **INC-1042**. Click **Deploy RAVEN**.
+2. Ignite: click a pad (T-04, V-17, south aisle, east bay, north wall) or the 3D floor / occupancy map.
+3. RAVEN coverage-searches. Sensors trip on the **Sensors** page. Graphs fill on **Analytics**.
+4. When IR + UV and (VOC or RGB) agree, pick a mitigation: **CO₂**, **foam**, **isolate V-17**, or **human**. Isolate only starves tank-side fires.
+5. Camera: drag orbit, wheel zoom, right-drag pan, **WASD** move, **Q/E** height. Presets Crane / Follow / Top / Seat / Robot.
 
-![On-scene orders after inspect](docs/superpowers/proof/03-orders.png)
+![Plant top view](docs/superpowers/proof/plant-top.png)
 
-![Sealed: V-17 at 90°, leak isolated](docs/superpowers/proof/04-sealed.png)
+![Fire located, mitigate orders](docs/superpowers/proof/fire-orders.png)
+
+![Sensor lab](docs/superpowers/proof/page-sensors.png)
+
+![Analytics fusion](docs/superpowers/proof/page-analytics.png)
 
 ```bat
 python -m raven --no-view          :: headless, prints DONE / HUMAN_ASSIST
@@ -51,7 +55,7 @@ python -m raven --port 8765
 python -m raven --backend coppelia :: optional CoppeliaSim Edu window
 ```
 
-`Ctrl+C` in the terminal stops the control room. Space pauses, R restarts, F follow-cam, drag to orbit.
+`Ctrl+C` in the terminal stops the control room. Space pauses, R restarts, F follow-cam.
 
 ## What we are solving
 
@@ -104,10 +108,15 @@ raven/
   sim/mock_world.py        kinematics, valve physics, synthetic camera
   sim/scene_builder.py     Coppelia primitives if the scene is empty
   sim/recorder.py          20 Hz mission tape (pose, arm, sonars, HSV)
-  sim/story.py             INC-1042 briefing + four on-scene branches
+  sim/story.py             INC-1042 briefing + leak branches + fire bundle
+  sim/fire.py              IR / smoke / VOC / UV / flux field + patrol
   sim/studio.py            HTTP control room
   sim/frames.py            plant (x,y,z) → Three.js (x,z,y)
-  web/                     Three.js control room (ticket, map, 3D, orders)
+  web/index.html           Plant 3D + ignite + mitigate
+  web/sensors.html         Sensor lab (close-ups, trip rules)
+  web/analytics.html       Graphs + fusion log
+  web/fire.js              Hunt, A*, sensor draw (numbers match fire.py)
+  web/bus.js               Live telemetry to the other pages
 tests/                     pytest, including headless --no-view
 docs/superpowers/specs/    design spec
 docs/superpowers/plans/    implementation plan
@@ -128,7 +137,7 @@ The course handout spreadsheet stays on disk untracked. Do not replace the 10-po
 python -m pytest tests -q
 ```
 
-Covers A*, DH/IK, vision, FSM, mock mission, sonar rays, story branches, and the HTTP control room. `--no-view` is the headless path tests use.
+Covers A*, DH/IK, vision, FSM, mock mission, sonar rays, story branches, fire sensors, and the HTTP control room. `--no-view` is the headless path tests use.
 
 ## CoppeliaSim Edu (optional)
 

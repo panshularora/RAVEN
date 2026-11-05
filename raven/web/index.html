@@ -6,7 +6,7 @@
   <title>RAVEN · INC-1042 isolation cell</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./studio.css" />
 </head>
 <body>
@@ -21,7 +21,7 @@
       </dl>
       <p id="ticket-problem" class="ticket-problem"></p>
       <h2>Known map</h2>
-      <p class="ticket-note">RAVEN already has occupancy, home (1, 1), and the alarm pose at V-17. Humans stay outside.</p>
+      <p class="ticket-note">RAVEN has occupancy and home (1, 1). It does not get the fire seat. You ignite. It hunts.</p>
       <ol id="ticket-methods" class="methods"></ol>
       <button id="deploy" type="button">Deploy RAVEN</button>
     </article>
@@ -29,33 +29,41 @@
 
   <header>
     <div class="brand">
+      <span class="live-dot" aria-hidden="true"></span>
       <span class="mark">RAVEN</span>
-      <span class="sub" id="inc-sub">leak isolation · plant 8×6 m</span>
+      <span class="sub" id="inc-sub">fire hunt · plant 8×6 m</span>
     </div>
+    <nav class="site-nav" aria-label="console">
+      <a href="./index.html" class="on" aria-current="page">Plant</a>
+      <a href="./sensors.html">Sensors</a>
+      <a href="./analytics.html">Analytics</a>
+    </nav>
     <p id="story">Loading the plant…</p>
     <div class="status">
-      <div id="alarm" class="led alarm" role="status">LEAK</div>
+      <div id="alarm" class="led alarm" role="status">CELL</div>
       <div id="clock" class="clock">T+00:00.0</div>
     </div>
   </header>
 
   <aside id="log-col">
-    <h2>Plant map</h2>
+    <h2>Occupancy</h2>
     <canvas id="minimap" width="280" height="210" aria-label="Occupancy map of Bay 3"></canvas>
-    <p id="map-caption">A* on a 0.10 m grid. Dark = occupied. Amber = planned path.</p>
-    <h2>Sensors live</h2>
+    <p id="map-caption">Click the map or a pad to ignite · A* 0.10 m grid</p>
+    <div id="pads" class="pads" aria-label="ignition pads"></div>
+    <h2>Range · 5 beam</h2>
     <div id="sonar-panel" aria-label="five forward sonars">
-      <span class="panel-kicker">SONAR · ±40° · 2 m</span>
       <div id="sonar-bars"></div>
       <p id="sonar-vals" class="mono"></p>
     </div>
+    <h2>Wheel bus</h2>
+    <canvas id="spark" width="280" height="56" aria-label="left and right wheel speeds"></canvas>
     <dl id="sensor-out">
       <div><dt>ODOM</dt><dd id="pos">1.00, 1.00</dd></div>
       <div><dt>YAW</dt><dd id="yaw">0°</dd></div>
       <div><dt>WHEELS</dt><dd id="wheels">L 0  R 0</dd></div>
-      <div><dt>HSV</dt><dd id="hsv">—</dd></div>
-      <div><dt>IK res</dt><dd id="ik">—</dd></div>
-      <div><dt>GRIP</dt><dd id="grip">OPEN</dd></div>
+      <div><dt>IR</dt><dd id="hsv">28 °C</dd></div>
+      <div><dt>VOC</dt><dd id="ik">0 ppm</dd></div>
+      <div><dt>UV</dt><dd id="grip">0</dd></div>
     </dl>
     <h2>Event log</h2>
     <p id="blurb"></p>
@@ -63,13 +71,27 @@
   </aside>
 
   <main id="stage">
-    <canvas id="view" aria-label="3D plant. Orange robot, blue tank, green valve."></canvas>
+    <canvas id="view" aria-label="3D plant. Click the floor to start a fire."></canvas>
+    <div id="cam-bar" class="cam-bar" role="group" aria-label="camera">
+      <button type="button" data-cam="crane">Crane</button>
+      <button type="button" data-cam="follow">Follow</button>
+      <button type="button" data-cam="top">Top</button>
+      <button type="button" data-cam="seat">Seat</button>
+      <button type="button" data-cam="robot">Robot</button>
+    </div>
+    <p class="cam-help">Drag orbit · wheel zoom · right-drag pan · WASD move · Q/E height · F follow</p>
+    <p id="ignite-hint" hidden>Click a free cell or a pad to ignite</p>
+    <div class="vp-frame" aria-hidden="true">
+      <i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>
+      <span class="vp-tag">world · 8×6 m</span>
+    </div>
     <ul id="legend">
       <li><i class="swatch robot"></i>robot</li>
       <li><i class="swatch tank"></i>tank T-04</li>
       <li><i class="swatch valve"></i>valve V-17</li>
       <li><i class="swatch aisle"></i>aisle obstacle</li>
       <li><i class="swatch sonar"></i>sonar fan</li>
+      <li><i class="swatch fire"></i>fire seat</li>
     </ul>
     <div id="hud-chip"><span id="hud-phase">IDLE</span><span id="hud-order">awaiting deploy</span></div>
   </main>
@@ -77,27 +99,37 @@
   <aside id="side">
     <h2>Mission FSM</h2>
     <ol id="phases">
-      <li data-phase="NAVIGATE">NAVIGATE</li>
+      <li data-phase="IDLE">IDLE</li>
+      <li data-phase="SEARCH">SEARCH</li>
+      <li data-phase="LOCATE">LOCATE</li>
       <li data-phase="INSPECT">INSPECT</li>
-      <li data-phase="APPROACH">APPROACH</li>
-      <li data-phase="PLAN">PLAN</li>
-      <li data-phase="INTERVENE">INTERVENE</li>
-      <li data-phase="VERIFY">VERIFY</li>
+      <li data-phase="MITIGATE">MITIGATE</li>
       <li data-phase="DONE">DONE</li>
       <li data-phase="HUMAN_ASSIST">HUMAN</li>
     </ol>
+    <p class="side-links">
+      <a href="./sensors.html">Sensor lab → close-ups &amp; trip rules</a>
+      <a href="./analytics.html">Analytics → graphs &amp; fusion log</a>
+    </p>
+    <div id="lab-offscreen" hidden>
+      <div id="chips" class="chips"></div>
+      <canvas id="ir" width="64" height="64"></canvas>
+      <canvas id="cam" width="64" height="64"></canvas>
+      <b id="cam-rec">REC</b>
+      <div id="pile" class="pile"></div>
+      <canvas id="graph" width="280" height="110"></canvas>
+      <span id="smoke-read"></span>
+      <span id="flux-read"></span>
+      <span id="fire-d"></span>
+    </div>
     <div class="gauge-wrap">
       <svg viewBox="0 0 120 96" id="gauge" aria-label="valve angle">
-        <path d="M16 84 A 44 44 0 0 1 104 84" fill="none" stroke="#3a433c" stroke-width="8" />
+        <path d="M16 84 A 44 44 0 0 1 104 84" fill="none" stroke="#585861" stroke-width="8" />
         <line id="needle" x1="60" y1="84" x2="60" y2="36" />
-        <circle cx="60" cy="84" r="4" fill="#e0a21a" />
+        <circle cx="60" cy="84" r="4" fill="#EF833A" />
         <text x="60" y="18" text-anchor="middle">VALVE</text>
         <text id="valve-num" x="60" y="94" text-anchor="middle">0°</text>
       </svg>
-    </div>
-    <div class="cam-wrap">
-      <span>WRIST CAM · HSV</span>
-      <canvas id="cam" width="64" height="64" aria-label="wrist camera"></canvas>
     </div>
     <h2>How it solves</h2>
     <ul id="how" class="how"></ul>
@@ -113,14 +145,14 @@
       <button type="button" data-speed="1" class="on">1×</button>
       <button type="button" data-speed="2">2×</button>
     </div>
-    <p class="hint">Space pause · R restart · F follow · drag orbit</p>
+    <p class="hint">Click plant to ignite · Space pause · R restart · 1–4 mitigate</p>
   </footer>
 
   <div id="orders" class="sheet" hidden>
     <div class="orders-card" role="dialog" aria-labelledby="orders-title">
-      <p class="orders-kicker">On scene · leak confirmed</p>
-      <h2 id="orders-title">Order for V-17</h2>
-      <p id="orders-copy">Wrist camera saw red spray and a green handle. Pick the intervention. The robot stays put until you choose.</p>
+      <p class="orders-kicker">On scene · fire located</p>
+      <h2 id="orders-title">Mitigate the seat</h2>
+      <p id="orders-copy">IR, UV and vapour agree on the seat. Keys 1–4. The robot holds until you order.</p>
       <div id="order-list"></div>
     </div>
   </div>
@@ -131,7 +163,7 @@
       <h2 id="debrief-title">SEALED</h2>
       <p id="debrief-body"></p>
       <dl id="debrief-stats"></dl>
-      <button id="debrief-again" type="button">Run another order</button>
+      <button id="debrief-again" type="button">Ignite another</button>
     </div>
   </div>
 
